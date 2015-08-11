@@ -27,7 +27,7 @@ setup(
         ]
     },
     install_requires=[
-        "django-appconf>=1.0.1"
+        "django-appconf>=1.0.1", "django-templated-email==0.4.9"
     ],
     test_suite="runtests.runtests",
     classifiers=[

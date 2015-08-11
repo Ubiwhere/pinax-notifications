@@ -5,6 +5,8 @@ from django.utils.translation import ugettext
 
 from .base import BaseBackend
 
+from templated_email import send_templated_mail
+
 
 class EmailBackend(BaseBackend):
     spam_sensitivity = 2
@@ -17,7 +19,6 @@ class EmailBackend(BaseBackend):
 
     def deliver(self, recipient, sender, notice_type, extra_context):
         # TODO: require this to be passed in extra_context
-
         context = self.default_context()
         context.update({
             "recipient": recipient,
@@ -40,3 +41,34 @@ class EmailBackend(BaseBackend):
         }, context)
 
         send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [recipient.email])
+
+
+class HtmlEmailBackend(EmailBackend):
+
+    def deliver(self, recipient, sender, notice_type, extra_context):
+        context = self.default_context()
+        context.update({
+            "recipient": recipient,
+            "sender": sender,
+            "notice": ugettext(notice_type.display),
+        })
+        context.update(extra_context)
+
+        # Added support for Html Email templates with django-templated-email
+
+        context.update({
+            'site_domain': settings.BASE_URL,
+            'full_name': recipient.get_full_name()
+        })
+
+        template_prefix = (
+            'pinax/notifications/{0}/templated_email/'.format(notice_type.label)
+        )
+
+        send_templated_mail(
+            template_name='base',
+            template_prefix=template_prefix,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[recipient.email],
+            context=context,
+        )

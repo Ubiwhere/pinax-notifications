@@ -112,6 +112,16 @@ the template path called `pinax/notifications/<notice_type_label>/<template_name
 
 If any of these are missing, a default would be used.
 
+To use the HTML email backend make sure you have the template with the appropriate HTML in pinax/notifications/<notice_type_label>/templated_email/base.email
+
+You also need to have django-templated-emails installed as a dependency and set
+
+```
+PINAX_NOTIFICATIONS_BACKENDS = [("email", "pinax.notifications.backends.email.HtmlEmailBackend"),]
+```
+
+in your settings file.
+
 
 ## Sending Notifications
 
