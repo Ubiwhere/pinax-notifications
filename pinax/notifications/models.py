@@ -15,6 +15,7 @@ from django.contrib.contenttypes.models import ContentType
 
 from .compat import GenericForeignKey
 from .conf import settings
+from pinax.notifications.managers import NoticeManager
 from .utils import load_media_defaults, notice_setting_for_user
 
 
@@ -100,6 +101,47 @@ class NoticeSetting(models.Model):
         unique_together = ("user", "notice_type", "medium", "scoping_content_type", "scoping_object_id")
 
 
+class Notice(models.Model):
+    recipient = models.ForeignKey(
+        settings.AUTH_USER_MODEL, related_name="received_notices",
+        verbose_name=_("recipient"))
+    sender = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        related_name="sent_notices", verbose_name=_("sender"))
+    notice_type = models.ForeignKey(NoticeType, verbose_name=_("notice type"))
+    unseen = models.BooleanField(_("unseen"), default=True)
+    archived = models.BooleanField(_("archived"), default=False)
+
+    created_on = models.DateTimeField(auto_now_add=True)
+    updated_on = models.DateTimeField(auto_now=True)
+
+    objects = NoticeManager()
+
+    def __str__(self):
+        return u'%s' % self.recipient.email
+
+    def archive(self):
+        self.archived = True
+        self.save()
+
+    def is_unseen(self):
+        """
+        Returns value of self.unseen, but also changes it to false.
+        Use this in a template to mark an unseen notice differently the first
+        time it is shown.
+        """
+        unseen = self.unseen
+        if unseen:
+            self.unseen = False
+            self.save()
+        return unseen
+
+    class Meta:
+        ordering = ["-updated_on"]
+        verbose_name = _("notice")
+        verbose_name_plural = _("notices")
+
+
 class NoticeQueueBatch(models.Model):
     """
     A queued notice.
@@ -125,7 +167,7 @@ def get_notification_language(user):
     raise LanguageStoreNotAvailable
 
 
-def send_now(users, label, extra_context=None, sender=None, scoping=None):
+def send_now(users, label, extra_context=None, sender=None, scoping=None, send_email=True):
     """
     Creates a new notice.
 
@@ -158,8 +200,20 @@ def send_now(users, label, extra_context=None, sender=None, scoping=None):
 
         for backend in settings.PINAX_NOTIFICATIONS_BACKENDS.values():
             if backend.can_send(user, notice_type, scoping=scoping):
-                backend.deliver(user, sender, notice_type, extra_context)
-                sent = True
+                if send_email:
+                    backend.deliver(user, sender, notice_type, extra_context)
+                    sent = True
+                else:
+                    notice, created = Notice.objects.get_or_create(
+                        recipient=user, notice_type=notice_type,
+                        defaults={'sender': sender})
+
+                    if not created:
+                        notice.unseen = True
+                        notice.archived = False
+                        notice.save()
+
+                    sent = True
 
     # reset environment to original language
     activate(current_language)
