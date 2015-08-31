@@ -202,18 +202,18 @@ def send_now(users, label, extra_context=None, sender=None, scoping=None, send_e
             if backend.can_send(user, notice_type, scoping=scoping):
                 if send_email:
                     backend.deliver(user, sender, notice_type, extra_context)
-                    sent = True
-                else:
-                    notice, created = Notice.objects.get_or_create(
-                        recipient=user, notice_type=notice_type,
-                        defaults={'sender': sender})
 
-                    if not created:
-                        notice.unseen = True
-                        notice.archived = False
-                        notice.save()
+                notice, created = Notice.objects.get_or_create(
+                    recipient=user, notice_type=notice_type,
+                    defaults={'sender': sender}
+                )
 
-                    sent = True
+                if not created:
+                    notice.unseen = True
+                    notice.archived = False
+                    notice.save()
+
+                sent = True
 
     # reset environment to original language
     activate(current_language)
