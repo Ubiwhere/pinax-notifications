@@ -110,6 +110,9 @@ class Notice(models.Model):
         related_name="sent_notices", verbose_name=_("sender"))
     notice_type = models.ForeignKey(NoticeType, verbose_name=_("notice type"))
     unseen = models.BooleanField(_("unseen"), default=True)
+    # We are using this variable so we don't mess around with the built in
+    # unseen variable. This variable is merely for knowing if the notice was
+    # displayed already or not.
     unseen_notice = models.BooleanField(_("unseen_notice"), default=True)
     archived = models.BooleanField(_("archived"), default=False)
 
@@ -211,6 +214,7 @@ def send_now(users, label, extra_context=None, sender=None, scoping=None, send_e
 
                 if not created:
                     notice.unseen = True
+                    notice.unseen_notice = True
                     notice.archived = False
                     notice.save()
 
