@@ -110,6 +110,7 @@ class Notice(models.Model):
         related_name="sent_notices", verbose_name=_("sender"))
     notice_type = models.ForeignKey(NoticeType, verbose_name=_("notice type"))
     unseen = models.BooleanField(_("unseen"), default=True)
+    unseen_notice = models.BooleanField(_("unseen_notice"), default=True)
     archived = models.BooleanField(_("archived"), default=False)
 
     created_on = models.DateTimeField(auto_now_add=True)
